@@ -4,6 +4,8 @@ import com.sfsai.models.Observation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.Json
 import io.ktor.client.*
 import io.ktor.client.engine.cio.CIO
@@ -24,8 +26,12 @@ class WebSocketClient(private var serverAddress: String = "ws://localhost:8080/w
     
     private val job = Job()
     private val scope = CoroutineScope(job)
-    private val isConnectedAtomic = AtomicBoolean(false)
     
+    // FIX: Implement actual connection-state observation using StateFlow
+    private val _connectionStateFlow = MutableStateFlow(false)
+    val connectionStateFlow: StateFlow<Boolean> = _connectionStateFlow
+    
+    private val isConnectedAtomic = AtomicBoolean(false)
     var isConnected: Boolean
         get() = isConnectedAtomic.get()
         private set
@@ -34,11 +40,16 @@ class WebSocketClient(private var serverAddress: String = "ws://localhost:8080/w
         scope.launch {
             try {
                 client.webSocket(block = {
-                    send(Observation()) // Initial handshake/observation
+                    // Send initial observation (Protocol v1)
+                    send(Observation())
+                    
+                    _connectionStateFlow.value = true
+                    isConnectedAtomic.set(true)
+
                     for (frame in incoming) {
                         when (frame) {
                             is Frame.Text -> {
-                                // Handle incoming messages from AI engine
+                                // Handle incoming messages from AI engine (Future MVP 2+)
                                 val json = frame.readText()
                                 // Parse and update state
                             }
@@ -46,13 +57,14 @@ class WebSocketClient(private var serverAddress: String = "ws://localhost:8080/w
                         }
                     }
                 }, url = serverAddress) {
-                    isConnectedAtomic.set(true)
                     // Keep alive / Reconnection logic would go here
                 }
             } catch (e: Exception) {
+                _connectionStateFlow.value = false
                 isConnectedAtomic.set(false)
                 // Reconnection backoff logic
             } finally {
+                _connectionStateFlow.value = false
                 isConnectedAtomic.set(false)
             }
         }
@@ -61,6 +73,7 @@ class WebSocketClient(private var serverAddress: String = "ws://localhost:8080/w
     fun disconnect() {
         job.cancel()
         client.close()
+        _connectionStateFlow.value = false
         isConnectedAtomic.set(false)
     }
     
@@ -68,7 +81,7 @@ class WebSocketClient(private var serverAddress: String = "ws://localhost:8080/w
         scope.launch {
             if (isConnected) {
                 try {
-                    // Implementation for sending JSON message
+                    // Implementation for sending JSON message (Protocol v1)
                 } catch (e: Exception) {
                     // Handle error
                 }
