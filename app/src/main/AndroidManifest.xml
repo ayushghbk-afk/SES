@@ -7,7 +7,6 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <!-- Note: MediaProjection permissions are handled via Intent, not manifest -->
 
     <application
         android:allowBackup="true"
@@ -30,7 +29,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Foreground Service for future capture (Stubbed per Spec) -->
+        <!-- Foreground Service Stub (Per Spec: No screen capture main architecture) -->
         <service
             android:name=".services.ScreenCaptureService"
             android:exported="false"
